@@ -1,0 +1,125 @@
+-- Configuration & Clean UI Setup
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local UICorner = Instance.new("UICorner")
+local TitleLabel = Instance.new("TextLabel")
+local ToggleButton = Instance.new("TextButton")
+local ButtonCorner = Instance.new("UICorner")
+local StatusLabel = Instance.new("TextLabel")
+
+-- Setup Screen GUI container
+ScreenGui.Name = "SleekFlyChestGui"
+ScreenGui.Parent = game.CoreGui
+ScreenGui.ResetOnSpawn = false
+
+-- Design a minimalist charcoal background panel
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 22, 27) -- Deep dark gray
+MainFrame.Position = UDim2.new(0.05, 0, 0.35, 0)
+MainFrame.Size = UDim2.new(0, 240, 0, 140)
+MainFrame.Active = true
+MainFrame.Draggable = true -- Drag the window anywhere on screen
+
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = MainFrame
+
+-- Premium Header Typography
+TitleLabel.Name = "TitleLabel"
+TitleLabel.Parent = MainFrame
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Position = UDim2.new(0, 0, 0.08, 0)
+TitleLabel.Size = UDim2.new(1, 0, 0.25, 0)
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.Text = "FLY CHEST COLLECTOR"
+TitleLabel.TextColor3 = Color3.fromRGB(240, 240, 245)
+TitleLabel.TextSize = 13
+
+-- Toggle Execution Switch
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Parent = MainFrame
+ToggleButton.BackgroundColor3 = Color3.fromRGB(220, 53, 69) -- Modern Crimson
+ToggleButton.Position = UDim2.new(0.1, 0, 0.42, 0)
+ToggleButton.Size = UDim2.new(0.8, 0, 0.32, 0)
+ToggleButton.Font = Enum.Font.GothamSemibold
+ToggleButton.Text = "START FLY FARM"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextSize = 12
+
+ButtonCorner.CornerRadius = UDim.new(0, 8)
+ButtonCorner.Parent = ToggleButton
+
+-- Small Status Subtext
+StatusLabel.Name = "StatusLabel"
+StatusLabel.Parent = MainFrame
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Position = UDim2.new(0, 0, 0.78, 0)
+StatusLabel.Size = UDim2.new(1, 0, 0.2, 0)
+StatusLabel.Font = Enum.Font.Gotham
+StatusLabel.Text = "Status: Sleeping"
+StatusLabel.TextColor3 = Color3.fromRGB(140, 145, 155)
+StatusLabel.TextSize = 11
+
+-- Core Flying & Logic System
+local isFarming = false
+local flySpeed = 70 -- Adjust this value to fly faster or slower
+
+-- Clean function to smoothly move the character to target coordinates
+local function flyToTarget(targetPart)
+    local player = game.Players.LocalPlayer
+    local character = player.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    
+    local rootPart = character.HumanoidRootPart
+    
+    -- Loop moving towards the target until close enough
+    while isFarming and targetPart and targetPart.Parent and (rootPart.Position - targetPart.Position).Magnitude > 4 do
+        local currentPos = rootPart.Position
+        local targetPos = targetPart.Position
+        local direction = (targetPos - currentPos).Unit
+        
+        -- Incrementally shift position frame-by-frame
+        rootPart.CFrame = CFrame.new(currentPos + (direction * (flySpeed * task.wait())))
+        rootPart.Velocity = Vector3.new(0, 0, 0) -- Kill gravity/velocity drops while flying
+    end
+end
+
+-- Primary looping function to track down map elements
+local function startFarmingLoop()
+    while isFarming do
+        local targetChest = nil
+        
+        -- Query existing elements in workspace for game chests
+        for _, obj in pairs(workspace:GetChildren()) do
+            if string.find(obj.Name, "Chest") and obj:IsA("BasePart") then
+                targetChest = obj
+                break
+            end
+        end
+        
+        if targetChest then
+            StatusLabel.Text = "Status: Flying to " .. targetChest.Name .. "..."
+            flyToTarget(targetChest)
+            task.wait(0.5) -- Small rest duration to let the server process the reward pick-up
+        else
+            StatusLabel.Text = "Status: Searching for active chests..."
+            task.wait(2)
+        end
+    end
+end
+
+-- UI Toggle Triggers
+ToggleButton.MouseButton1Click:Connect(function()
+    isFarming = not isFarming
+    
+    if isFarming then
+        ToggleButton.Text = "STOP FLY FARM"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(40, 167, 69) -- Eco Emerald Green
+        StatusLabel.Text = "Status: Active"
+        task.spawn(startFarmingLoop)
+    else
+        ToggleButton.Text = "START FLY FARM"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(220, 53, 69) -- Return to Crimson
+        StatusLabel.Text = "Status: Stopped"
+    end
+end)
