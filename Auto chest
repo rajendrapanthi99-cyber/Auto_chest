@@ -1,0 +1,108 @@
+-- Clean UI Configuration & Theme
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local UICorner = Instance.new("UICorner")
+local TitleLabel = Instance.new("TextLabel")
+local ToggleButton = Instance.new("TextButton")
+local ButtonCorner = Instance.new("UICorner")
+local StatusLabel = Instance.new("TextLabel")
+
+-- Setup the Screen GUI
+ScreenGui.Name = "ModernChestGui"
+ScreenGui.Parent = game.CoreGui
+ScreenGui.ResetOnSpawn = false
+
+-- Design a sleek, modern dark background frame
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(24, 26, 32) -- Deep charcoal
+MainFrame.Position = UDim2.new(0.05, 0, 0.4, 0)
+MainFrame.Size = UDim2.new(0, 220, 0, 130)
+MainFrame.Active = true
+MainFrame.Draggable = true -- Allows you to click and drag the UI anywhere
+
+UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.Parent = MainFrame
+
+-- Header Title
+TitleLabel.Name = "TitleLabel"
+TitleLabel.Parent = MainFrame
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Position = UDim2.new(0, 0, 0.08, 0)
+TitleLabel.Size = UDim2.new(1, 0, 0.25, 0)
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.Text = "CHEST COLLECTOR"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.TextSize = 14
+
+-- Clean Action Button
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Parent = MainFrame
+ToggleButton.BackgroundColor3 = Color3.fromRGB(235, 64, 52) -- Minimalist red (Disabled state)
+ToggleButton.Position = UDim2.new(0.1, 0, 0.42, 0)
+ToggleButton.Size = UDim2.new(0.8, 0, 0.32, 0)
+ToggleButton.Font = Enum.Font.GothamSemibold
+ToggleButton.Text = "START FARM"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextSize = 13
+
+ButtonCorner.CornerRadius = UDim.new(0, 6)
+ButtonCorner.Parent = ToggleButton
+
+-- Mini Status Output
+StatusLabel.Name = "StatusLabel"
+StatusLabel.Parent = MainFrame
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Position = UDim2.new(0, 0, 0.78, 0)
+StatusLabel.Size = UDim2.new(1, 0, 0.2, 0)
+StatusLabel.Font = Enum.Font.Gotham
+StatusLabel.Text = "Status: Idle"
+StatusLabel.TextColor3 = Color3.fromRGB(150, 155, 165)
+StatusLabel.TextSize = 11
+
+-- Core Functionality Logic
+local farmingActive = false
+
+-- Function to safely sweep the map and collect chests
+local function collectChests()
+    while farmingActive do
+        local foundChest = false
+        -- Search all elements currently rendered in the workspace
+        for _, object in pairs(workspace:GetChildren()) do
+            if string.find(object.Name, "Chest") and object:IsA("BasePart") then
+                foundChest = true
+                StatusLabel.Text = "Status: Teleporting to chest..."
+                
+                -- Instantly reposition player to the chest coordinates
+                local player = game.Players.LocalPlayer
+                if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    player.Character.HumanoidRootPart.CFrame = object.CFrame
+                end
+                
+                task.wait(1.5) -- Essential structural pause to allow server pickup registration
+            end
+        end
+        
+        if not foundChest then
+            StatusLabel.Text = "Status: Waiting for new chests..."
+            task.wait(3) -- Delay before rescanning the environment map
+        end
+    end
+end
+
+-- UI Interaction Event
+ToggleButton.MouseButton1Click:Connect(function()
+    farmingActive = not farmingActive
+    
+    if farmingActive then
+        ToggleButton.Text = "STOP FARM"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113) -- Emerald green (Active state)
+        StatusLabel.Text = "Status: Running"
+        -- Fire execution loop on a background thread
+        task.spawn(collectChests)
+    else
+        ToggleButton.Text = "START FARM"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(235, 64, 52) -- Return to red
+        StatusLabel.Text = "Status: Stopped"
+    end
+end)
